@@ -1,26 +1,104 @@
 @import "tailwindcss";
 
+/* StudyFlow - Focus-enhancing dark mode color palette */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Backgrounds - Very dark green shades for focus */
+  --bg-primary: #0A120E;
+  --bg-secondary: #0F1A14;
+  --bg-card: #132117;
+  --bg-elevated: #1A2B22;
+
+  /* Accent colors - research-based for focus */
+  --accent-blue: #4F8FE8;
+  --accent-green: #4ADE80;
+  --accent-highlight: #60A5FA;
+  --accent-purple: #A78BFA;
+  --accent-teal: #2DD4BF;
+
+  /* Text colors */
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+
+  /* Borders */
+  --border-default: #1E3A2B;
+  --border-hover: #2D5240;
+
+  /* Status */
+  --success: #4ADE80;
+  --error: #F87171;
+  --warning: #FBBF24;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-card: var(--bg-card);
+  --color-bg-elevated: var(--bg-elevated);
+
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-green: var(--accent-green);
+  --color-accent-highlight: var(--accent-highlight);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-teal: var(--accent-teal);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-border-default: var(--border-default);
+  --color-border-hover: var(--border-hover);
+
+  --color-success: var(--success);
+  --color-error: var(--error);
+  --color-warning: var(--warning);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Always dark mode - no light mode */
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  overscroll-behavior: none;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+  overscroll-behavior: none;
+}
+
+/* Custom scrollbar for dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Focus ring for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+  background: var(--accent-green);
+  color: var(--bg-primary);
 }
