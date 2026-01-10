@@ -45,7 +45,8 @@ interface Question {
 
 interface UserAnswer {
   questionId: number
-  answer: string
+  answer: string      // The letter (A, B, C, D) or text for short answer
+  answerText: string  // The actual text of the selected option
 }
 
 interface QuizData {
@@ -174,7 +175,7 @@ export default function QuestionsPage() {
     setMaterial(item.quiz_data.material)
     setSubject(item.subject)
     setQuestions(item.quiz_data.questions)
-    setUserAnswers(item.quiz_data.questions.map(q => ({ questionId: q.id, answer: '' })))
+    setUserAnswers(item.quiz_data.questions.map(q => ({ questionId: q.id, answer: '', answerText: '' })))
     setCurrentQuestion(0)
     setSelectedHistoryId(item.id)
     setError('')
@@ -367,7 +368,7 @@ ${material}`,
       }
 
       setQuestions(parsedQuestions)
-      setUserAnswers(parsedQuestions.map(q => ({ questionId: q.id, answer: '' })))
+      setUserAnswers(parsedQuestions.map(q => ({ questionId: q.id, answer: '', answerText: '' })))
       setMode('quiz')
 
       // Save to Supabase
@@ -379,11 +380,22 @@ ${material}`,
     }
   }
 
-  const handleAnswer = (answer: string) => {
+  const handleAnswer = (answer: string, answerText?: string) => {
+    const question = questions[currentQuestion]
+    let text = answerText || answer
+
+    // If it's a multiple choice and we have an answer letter, get the text
+    if (question.options && answer.length === 1) {
+      const letterIndex = answer.toUpperCase().charCodeAt(0) - 65 // A=0, B=1, etc.
+      if (letterIndex >= 0 && letterIndex < question.options.length) {
+        text = question.options[letterIndex]
+      }
+    }
+
     setUserAnswers(prev =>
       prev.map(ua =>
-        ua.questionId === questions[currentQuestion].id
-          ? { ...ua, answer }
+        ua.questionId === question.id
+          ? { ...ua, answer, answerText: text }
           : ua
       )
     )
@@ -406,7 +418,7 @@ ${material}`,
   }
 
   const handleRetry = () => {
-    setUserAnswers(questions.map(q => ({ questionId: q.id, answer: '' })))
+    setUserAnswers(questions.map(q => ({ questionId: q.id, answer: '', answerText: '' })))
     setCurrentQuestion(0)
     setMode('quiz')
   }
@@ -424,30 +436,61 @@ ${material}`,
     setSelectedHistoryId(null)
   }
 
-  const calculateScore = () => {
-    let correct = 0
-    for (const q of questions) {
-      const userAnswer = userAnswers.find(ua => ua.questionId === q.id)?.answer || ''
-      const normalizedUser = userAnswer.toLowerCase().trim()
-      const normalizedCorrect = q.correctAnswer.toLowerCase().trim()
+  const isAnswerCorrect = (question: Question): boolean => {
+    const ua = userAnswers.find(a => a.questionId === question.id)
+    if (!ua || !ua.answer) return false
 
-      if (normalizedUser === normalizedCorrect ||
-          normalizedCorrect.includes(normalizedUser) ||
-          normalizedUser.includes(normalizedCorrect.charAt(0))) {
-        correct++
+    const userLetter = ua.answer.toUpperCase().trim()
+    const userText = ua.answerText.toLowerCase().trim()
+    const correctAnswer = question.correctAnswer.toLowerCase().trim()
+
+    // For multiple choice: check if the letter matches (correct answer might be "A" or "A) Option text")
+    if (question.options) {
+      const correctLetter = correctAnswer.charAt(0).toUpperCase()
+      // Check if user's letter matches the correct letter
+      if (userLetter === correctLetter) return true
+
+      // Also check if the correct answer contains the user's selected text
+      if (correctAnswer.includes(userText) || userText.includes(correctAnswer.replace(/^[a-d][.):\s]*/i, ''))) {
+        return true
       }
     }
-    return correct
+
+    // For true/false
+    if (question.type === 'true-false') {
+      return userText === correctAnswer || userLetter.toLowerCase() === correctAnswer
+    }
+
+    // For short answer or fallback
+    return userText === correctAnswer || correctAnswer.includes(userText)
   }
 
-  const isAnswerCorrect = (question: Question): boolean => {
-    const userAnswer = userAnswers.find(ua => ua.questionId === question.id)?.answer || ''
-    const normalizedUser = userAnswer.toLowerCase().trim()
-    const normalizedCorrect = question.correctAnswer.toLowerCase().trim()
+  const calculateScore = () => {
+    return questions.filter(q => isAnswerCorrect(q)).length
+  }
 
-    return normalizedUser === normalizedCorrect ||
-           normalizedCorrect.includes(normalizedUser) ||
-           (question.options !== undefined && normalizedUser === normalizedCorrect.charAt(0).toLowerCase())
+  // Get the correct answer text for display
+  const getCorrectAnswerText = (question: Question): string => {
+    const correctAnswer = question.correctAnswer.trim()
+
+    // If the correct answer is just a letter, get the option text
+    if (question.options && correctAnswer.length <= 2) {
+      const letterMatch = correctAnswer.match(/^([A-D])/i)
+      if (letterMatch) {
+        const letterIndex = letterMatch[1].toUpperCase().charCodeAt(0) - 65
+        if (letterIndex >= 0 && letterIndex < question.options.length) {
+          return `${letterMatch[1].toUpperCase()}) ${question.options[letterIndex]}`
+        }
+      }
+    }
+
+    // If it starts with a letter, format it nicely
+    const fullMatch = correctAnswer.match(/^([A-D])[.):\s]*(.+)/i)
+    if (fullMatch) {
+      return `${fullMatch[1].toUpperCase()}) ${fullMatch[2]}`
+    }
+
+    return correctAnswer
   }
 
   const currentAnswer = userAnswers.find(ua => ua.questionId === questions[currentQuestion]?.id)?.answer || ''
@@ -900,8 +943,18 @@ Examples:
               <h3 className="font-medium text-text-primary mb-3">Review Answers</h3>
               <div className="space-y-2">
                 {questions.map((question, index) => {
-                  const userAnswer = userAnswers.find(ua => ua.questionId === question.id)?.answer || ''
+                  const ua = userAnswers.find(a => a.questionId === question.id)
+                  const userAnswerLetter = ua?.answer || ''
+                  const userAnswerText = ua?.answerText || ''
                   const correct = isAnswerCorrect(question)
+                  const correctAnswerDisplay = getCorrectAnswerText(question)
+
+                  // Format user's answer for display
+                  const userAnswerDisplay = userAnswerLetter
+                    ? question.options && userAnswerLetter.length === 1
+                      ? `${userAnswerLetter.toUpperCase()}) ${userAnswerText}`
+                      : userAnswerText || userAnswerLetter
+                    : 'No answer'
 
                   return (
                     <div key={question.id} className={`border rounded-lg overflow-hidden ${correct ? 'border-accent-green/30' : 'border-error/30'}`}>
@@ -928,24 +981,24 @@ Examples:
                         <p className="text-text-primary text-sm">{question.question}</p>
 
                         <div className="grid sm:grid-cols-2 gap-2">
-                          <div className={`p-2 rounded-lg text-sm ${correct ? 'bg-accent-green/10 border border-accent-green/20' : 'bg-error/10 border border-error/20'}`}>
-                            <p className="text-xs text-text-muted mb-0.5">Your Answer</p>
-                            <p className={`font-medium ${correct ? 'text-accent-green' : 'text-error'}`}>
-                              {userAnswer || 'No answer'}
+                          <div className={`p-3 rounded-lg text-sm ${correct ? 'bg-accent-green/10 border border-accent-green/20' : 'bg-error/10 border border-error/20'}`}>
+                            <p className="text-xs text-text-muted mb-1">Your Answer</p>
+                            <p className={`font-medium leading-snug ${correct ? 'text-accent-green' : 'text-error'}`}>
+                              {userAnswerDisplay}
                             </p>
                           </div>
                           {!correct && (
-                            <div className="p-2 rounded-lg bg-accent-green/10 border border-accent-green/20 text-sm">
-                              <p className="text-xs text-text-muted mb-0.5">Correct Answer</p>
-                              <p className="text-accent-green font-medium">{question.correctAnswer}</p>
+                            <div className="p-3 rounded-lg bg-accent-green/10 border border-accent-green/20 text-sm">
+                              <p className="text-xs text-text-muted mb-1">Correct Answer</p>
+                              <p className="text-accent-green font-medium leading-snug">{correctAnswerDisplay}</p>
                             </div>
                           )}
                         </div>
 
                         {question.explanation && (
-                          <div className="p-2 rounded-lg bg-accent-blue/10 border border-accent-blue/20">
-                            <p className="text-xs text-accent-blue mb-0.5 font-medium">Explanation</p>
-                            <p className="text-text-secondary text-sm">{question.explanation}</p>
+                          <div className="p-3 rounded-lg bg-accent-blue/10 border border-accent-blue/20">
+                            <p className="text-xs text-accent-blue mb-1 font-medium">Explanation</p>
+                            <p className="text-text-secondary text-sm leading-relaxed">{question.explanation}</p>
                           </div>
                         )}
                       </div>
