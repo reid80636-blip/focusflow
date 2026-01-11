@@ -268,7 +268,6 @@ export default function PlannerPage() {
 
   const goToThisWeek = () => {
     setWeekStart(getWeekStart(new Date()))
-    setSelectedDate(formatDate(new Date()))
   }
 
   // Task operations
