@@ -1228,7 +1228,6 @@ ${material}`,
       {activeTool === 'notes' && (
         <>
           {notesMode === 'input' && (
-            <>
             <Card className="overflow-hidden border-2 border-border-default hover:border-accent-blue/30 transition-colors">
               <div className="bg-gradient-to-r from-accent-blue/10 to-transparent px-6 py-4 border-b border-border-default">
                 <div className="flex items-center gap-3">
@@ -1264,72 +1263,6 @@ ${material}`,
                 </div>
               </div>
             </Card>
-
-            {/* Notes History Section */}
-            {notesHistory.length > 0 && (
-              <Card className="border-border-default">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-text-primary flex items-center gap-2">
-                    <svg className="w-5 h-5 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Recent Notes
-                  </h3>
-                  <span className="text-xs text-text-muted">{filteredNotesHistory.length} items</span>
-                </div>
-
-                <div className="relative mb-4">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <input
-                    type="text"
-                    placeholder="Search notes..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-bg-secondary border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50"
-                  />
-                </div>
-
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {historyLoading ? (
-                    <div className="space-y-2">
-                      {[1, 2, 3].map(i => <div key={i} className="h-16 bg-bg-secondary rounded-lg animate-pulse" />)}
-                    </div>
-                  ) : filteredNotesHistory.length === 0 ? (
-                    <p className="text-center text-text-muted py-4 text-sm">No notes found</p>
-                  ) : (
-                    filteredNotesHistory.map(item => (
-                      <div
-                        key={item.id}
-                        onClick={() => loadNotesFromHistory(item)}
-                        className="group p-3 rounded-lg bg-bg-secondary hover:bg-bg-elevated cursor-pointer transition-all border border-transparent hover:border-accent-blue/30"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-text-primary truncate">{item.notes_data.notes.title || item.material_preview}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-text-muted">{formatDate(item.created_at)}</span>
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent-blue/20 text-accent-blue capitalize">{item.notes_data.style}</span>
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-bg-card text-text-muted capitalize">{item.subject}</span>
-                            </div>
-                          </div>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); deleteFromHistory(item.id, 'notes'); }}
-                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-error/20 text-text-muted hover:text-error transition-all"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </Card>
-            )}
-            </>
           )}
 
           {notesMode === 'view' && notes && (
@@ -1394,6 +1327,138 @@ ${material}`,
             </div>
           )}
         </>
+      )}
+
+      {/* ============ UNIFIED HISTORY SECTION ============ */}
+      {combinedHistory.length > 0 && (
+        <Card className="border-border-default">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-text-primary flex items-center gap-2">
+              <svg className="w-5 h-5 text-accent-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Study Materials History
+            </h3>
+            <span className="text-xs text-text-muted">{filteredHistory.length} items</span>
+          </div>
+
+          <div className="relative mb-4">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search quizzes, flashcards, notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-bg-secondary border border-border-default rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-highlight/50"
+            />
+          </div>
+
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {historyLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => <div key={i} className="h-16 bg-bg-secondary rounded-lg animate-pulse" />)}
+              </div>
+            ) : filteredHistory.length === 0 ? (
+              <p className="text-center text-text-muted py-4 text-sm">
+                {searchQuery ? 'No matching items found' : 'No study materials yet'}
+              </p>
+            ) : (
+              filteredHistory.map(item => {
+                const typeColors = {
+                  quiz: { bg: 'bg-amber-500/20', text: 'text-amber-500', border: 'hover:border-amber-500/30' },
+                  flashcards: { bg: 'bg-accent-purple/20', text: 'text-accent-purple', border: 'hover:border-accent-purple/30' },
+                  notes: { bg: 'bg-accent-blue/20', text: 'text-accent-blue', border: 'hover:border-accent-blue/30' },
+                }
+                const colors = typeColors[item.type]
+
+                const getTitle = () => {
+                  if (item.type === 'notes') {
+                    return (item.data as SavedNotes).notes_data.notes.title || item.data.material_preview
+                  }
+                  return item.data.material_preview
+                }
+
+                const getSubtitle = () => {
+                  if (item.type === 'quiz') {
+                    const quizData = item.data as SavedQuiz
+                    return `${quizData.quiz_data.questions.length} questions`
+                  }
+                  if (item.type === 'flashcards') {
+                    const flashcardData = item.data as SavedFlashcardSet
+                    return `${flashcardData.flashcard_data.cards.length} cards`
+                  }
+                  if (item.type === 'notes') {
+                    const notesData = item.data as SavedNotes
+                    return notesData.notes_data.style
+                  }
+                  return ''
+                }
+
+                const handleClick = () => {
+                  if (item.type === 'quiz') {
+                    setActiveTool('quiz')
+                    loadQuizFromHistory(item.data as SavedQuiz)
+                  } else if (item.type === 'flashcards') {
+                    setActiveTool('flashcards')
+                    loadFlashcardsFromHistory(item.data as SavedFlashcardSet)
+                  } else {
+                    setActiveTool('notes')
+                    loadNotesFromHistory(item.data as SavedNotes)
+                  }
+                }
+
+                return (
+                  <div
+                    key={`${item.type}-${item.data.id}`}
+                    onClick={handleClick}
+                    className={`group p-3 rounded-lg bg-bg-secondary hover:bg-bg-elevated cursor-pointer transition-all border border-transparent ${colors.border}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className={`w-8 h-8 rounded-lg ${colors.bg} flex items-center justify-center flex-shrink-0`}>
+                          {item.type === 'quiz' && (
+                            <svg className={`w-4 h-4 ${colors.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                          )}
+                          {item.type === 'flashcards' && (
+                            <svg className={`w-4 h-4 ${colors.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                          )}
+                          {item.type === 'notes' && (
+                            <svg className={`w-4 h-4 ${colors.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-text-primary truncate">{getTitle()}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-xs text-text-muted">{formatDate(item.data.created_at)}</span>
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${colors.bg} ${colors.text} capitalize`}>{item.type}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-bg-card text-text-muted capitalize">{getSubtitle()}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-bg-card text-text-muted capitalize">{item.data.subject}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteFromHistory(item.data.id, item.type); }}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-error/20 text-text-muted hover:text-error transition-all"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </Card>
       )}
     </div>
   )
