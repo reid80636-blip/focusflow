@@ -485,6 +485,18 @@ export default function PlannerPage() {
     }
   }
 
+  // Helper to extract JSON from AI response (strips markdown code blocks)
+  const extractJSON = (text: string): string => {
+    // Remove markdown code blocks if present
+    let cleaned = text.trim()
+    // Match ```json ... ``` or ``` ... ```
+    const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (codeBlockMatch) {
+      cleaned = codeBlockMatch[1].trim()
+    }
+    return cleaned
+  }
+
   // AI Parse
   const handleAIParse = async () => {
     if (!aiInput.trim()) return
@@ -498,7 +510,7 @@ export default function PlannerPage() {
         input: aiInput,
       })
 
-      const parsed = JSON.parse(response)
+      const parsed = JSON.parse(extractJSON(response))
 
       if (!parsed.title || !parsed.date) {
         throw new Error('Missing required fields')
