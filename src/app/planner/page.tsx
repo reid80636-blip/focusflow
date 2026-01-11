@@ -190,6 +190,8 @@ export default function PlannerPage() {
 
   // Quick input state
   const [quickInput, setQuickInput] = useState('')
+  const [addError, setAddError] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
 
   // DnD sensors
   const sensors = useSensors(
@@ -264,13 +266,20 @@ export default function PlannerPage() {
   const handleQuickAdd = async () => {
     if (!quickInput.trim()) return
 
+    setAddError('')
+    setIsAdding(true)
+
     const now = new Date()
     const currentHour = now.getHours()
     const time = `${currentHour.toString().padStart(2, '0')}:00`
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
+      if (!session?.user) {
+        setAddError('Please sign in to add activities')
+        setIsAdding(false)
+        return
+      }
 
       const { data, error } = await supabase
         .from('planner_tasks')
@@ -286,14 +295,19 @@ export default function PlannerPage() {
         .select()
         .single()
 
-      if (!error && data) {
+      if (error) {
+        console.error('Error adding task:', error)
+        setAddError('Failed to add activity: ' + error.message)
+      } else if (data) {
         setTasks(prev => [...prev, { ...data, duration: data.duration || 60 }])
+        setQuickInput('')
       }
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error('Error:', err)
+      setAddError('Something went wrong')
+    } finally {
+      setIsAdding(false)
     }
-
-    setQuickInput('')
   }
 
   const updateTaskTime = async (taskId: string, date: string, time: string) => {
@@ -453,23 +467,29 @@ export default function PlannerPage() {
           </div>
 
           {/* Quick Add */}
-          <div className="mt-4 flex gap-2">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                value={quickInput}
-                onChange={(e) => setQuickInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
-                placeholder="What do you need to do?"
-                className="w-full px-4 py-3 pl-11 bg-bg-card border-2 border-border-default rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-green transition-colors"
-              />
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
+          <div className="mt-4">
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={quickInput}
+                  onChange={(e) => { setQuickInput(e.target.value); setAddError('') }}
+                  onKeyDown={(e) => e.key === 'Enter' && !isAdding && handleQuickAdd()}
+                  placeholder="What do you need to do?"
+                  disabled={isAdding}
+                  className="w-full px-4 py-3 pl-11 bg-bg-card border-2 border-border-default rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-green transition-colors disabled:opacity-50"
+                />
+                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <Button onClick={handleQuickAdd} disabled={isAdding || !quickInput.trim()} className="px-6">
+                {isAdding ? 'Adding...' : 'Add'}
+              </Button>
             </div>
-            <Button onClick={handleQuickAdd} className="px-6">
-              Add
-            </Button>
+            {addError && (
+              <p className="text-red-500 text-sm mt-2">{addError}</p>
+            )}
           </div>
 
           {/* Week Navigation */}
