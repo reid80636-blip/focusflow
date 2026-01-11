@@ -185,21 +185,11 @@ export default function PlannerPage() {
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
-  const [showAddModal, setShowAddModal] = useState(false)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [dropTarget, setDropTarget] = useState<{ date: string, time: string } | null>(null)
 
   // Quick input state
   const [quickInput, setQuickInput] = useState('')
-
-  // New task form
-  const [newTask, setNewTask] = useState({
-    title: '',
-    date: formatDate(new Date()),
-    time: '09:00',
-    duration: 60,
-    subject: 'general',
-  })
 
   // DnD sensors
   const sensors = useSensors(
@@ -270,9 +260,13 @@ export default function PlannerPage() {
     setWeekStart(getWeekStart(new Date()))
   }
 
-  // Task operations
-  const handleAddTask = async () => {
-    if (!newTask.title.trim() || !newTask.date || !newTask.time) return
+  // Quick add task - creates immediately with defaults
+  const handleQuickAdd = async () => {
+    if (!quickInput.trim()) return
+
+    const now = new Date()
+    const currentHour = now.getHours()
+    const time = `${currentHour.toString().padStart(2, '0')}:00`
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -282,11 +276,11 @@ export default function PlannerPage() {
         .from('planner_tasks')
         .insert({
           user_id: session.user.id,
-          title: newTask.title.trim(),
-          date: newTask.date,
-          time: newTask.time,
-          duration: newTask.duration,
-          subject: newTask.subject,
+          title: quickInput.trim(),
+          date: formatDate(now),
+          time: time,
+          duration: 60,
+          subject: 'general',
           completed: false,
         })
         .select()
@@ -299,8 +293,6 @@ export default function PlannerPage() {
       // Silently fail
     }
 
-    setNewTask({ title: '', date: formatDate(new Date()), time: '09:00', duration: 60, subject: 'general' })
-    setShowAddModal(false)
     setQuickInput('')
   }
 
@@ -354,19 +346,6 @@ export default function PlannerPage() {
     } catch {
       // Silently fail
     }
-  }
-
-  // Quick add - just set the title and open the modal
-  const handleQuickAdd = () => {
-    if (!quickInput.trim()) return
-    setNewTask({
-      title: quickInput.trim(),
-      date: formatDate(new Date()),
-      time: '09:00',
-      duration: 60,
-      subject: 'general',
-    })
-    setShowAddModal(true)
   }
 
   // DnD handlers
@@ -470,13 +449,6 @@ export default function PlannerPage() {
                 </div>
               </div>
 
-              {/* Add Task */}
-              <Button size="sm" onClick={() => setShowAddModal(true)}>
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Task
-              </Button>
             </div>
           </div>
 
@@ -587,129 +559,6 @@ export default function PlannerPage() {
             </div>
           )}
         </DragOverlay>
-
-        {/* Add Task Modal */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-md">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-text-primary">Schedule Task</h2>
-                  <button
-                    onClick={() => setShowAddModal(false)}
-                    className="p-2 rounded-lg hover:bg-bg-elevated text-text-muted"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Title */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">
-                      Task Title <span className="text-error">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={newTask.title}
-                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                      placeholder="What do you need to do?"
-                      className="w-full px-4 py-3 bg-bg-elevated border-2 border-border-default rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-green"
-                    />
-                  </div>
-
-                  {/* Date & Time Row */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Date <span className="text-error">*</span>
-                      </label>
-                      <input
-                        type="date"
-                        value={newTask.date}
-                        onChange={(e) => setNewTask({ ...newTask, date: e.target.value })}
-                        className="w-full px-4 py-3 bg-bg-elevated border-2 border-border-default rounded-xl text-text-primary focus:outline-none focus:border-accent-green"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-2">
-                        Time <span className="text-error">*</span>
-                      </label>
-                      <input
-                        type="time"
-                        value={newTask.time}
-                        onChange={(e) => setNewTask({ ...newTask, time: e.target.value })}
-                        className="w-full px-4 py-3 bg-bg-elevated border-2 border-border-default rounded-xl text-text-primary focus:outline-none focus:border-accent-green"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Duration */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">Duration</label>
-                    <div className="flex gap-2">
-                      {[30, 60, 90, 120].map((d) => (
-                        <button
-                          key={d}
-                          type="button"
-                          onClick={() => setNewTask({ ...newTask, duration: d })}
-                          className={`flex-1 py-2 rounded-lg font-medium text-sm transition-all ${
-                            newTask.duration === d
-                              ? 'bg-accent-green text-white'
-                              : 'bg-bg-elevated text-text-secondary hover:bg-bg-elevated/80 border border-border-default'
-                          }`}
-                        >
-                          {d}m
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Subject */}
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-2">Subject</label>
-                    <div className="grid grid-cols-5 gap-2">
-                      {subjects.map((s) => (
-                        <button
-                          key={s.value}
-                          type="button"
-                          onClick={() => setNewTask({ ...newTask, subject: s.value })}
-                          className={`py-2 px-3 rounded-lg text-xs font-medium transition-all ${
-                            newTask.subject === s.value
-                              ? `${s.color} text-white`
-                              : `${s.lightBg} ${s.text} hover:opacity-80`
-                          }`}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3 mt-6">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowAddModal(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleAddTask}
-                    disabled={!newTask.title.trim() || !newTask.date || !newTask.time}
-                    className="flex-1"
-                  >
-                    Schedule Task
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
       </div>
     </DndContext>
   )
