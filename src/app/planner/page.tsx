@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button, Card } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
-import { generateAIResponse } from '@/lib/ai-client'
 import {
   DndContext,
   DragOverlay,
@@ -241,10 +240,8 @@ export default function PlannerPage() {
   const [activeTask, setActiveTask] = useState<Task | RecentTemplate | null>(null)
   const [dropTarget, setDropTarget] = useState<{ date: string, time: string } | null>(null)
 
-  // AI input state
-  const [aiInput, setAiInput] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiError, setAiError] = useState('')
+  // Quick input state
+  const [quickInput, setQuickInput] = useState('')
 
   // New task form
   const [newTask, setNewTask] = useState({
@@ -402,8 +399,7 @@ export default function PlannerPage() {
 
     setNewTask({ title: '', date: formatDate(new Date()), time: '09:00', duration: 60, subject: 'general' })
     setShowAddModal(false)
-    setAiInput('')
-    setAiError('')
+    setQuickInput('')
   }
 
   const updateTaskTime = async (taskId: string, date: string, time: string) => {
@@ -485,51 +481,17 @@ export default function PlannerPage() {
     }
   }
 
-  // Helper to extract JSON from AI response (strips markdown code blocks)
-  const extractJSON = (text: string): string => {
-    // Remove markdown code blocks if present
-    let cleaned = text.trim()
-    // Match ```json ... ``` or ``` ... ```
-    const codeBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (codeBlockMatch) {
-      cleaned = codeBlockMatch[1].trim()
-    }
-    return cleaned
-  }
-
-  // AI Parse
-  const handleAIParse = async () => {
-    if (!aiInput.trim()) return
-
-    setAiLoading(true)
-    setAiError('')
-
-    try {
-      const response = await generateAIResponse({
-        feature: 'planner',
-        input: aiInput,
-      })
-
-      const parsed = JSON.parse(extractJSON(response))
-
-      if (!parsed.title || !parsed.date) {
-        throw new Error('Missing required fields')
-      }
-
-      setNewTask({
-        title: parsed.title,
-        date: parsed.date,
-        time: parsed.time || '09:00',
-        duration: parsed.duration || 60,
-        subject: parsed.subject || 'general',
-      })
-      setShowAddModal(true)
-    } catch (err) {
-      console.error('AI Parse error:', err)
-      setAiError('Could not understand. Try: "Math homework tomorrow at 3pm for 2 hours"')
-    } finally {
-      setAiLoading(false)
-    }
+  // Quick add - just set the title and open the modal
+  const handleQuickAdd = () => {
+    if (!quickInput.trim()) return
+    setNewTask({
+      title: quickInput.trim(),
+      date: formatDate(new Date()),
+      time: '09:00',
+      duration: 60,
+      subject: 'general',
+    })
+    setShowAddModal(true)
   }
 
   // DnD handlers
@@ -596,15 +558,6 @@ export default function PlannerPage() {
     return `${monthNames[start.getMonth()]} ${start.getDate()} - ${monthNames[end.getMonth()]} ${end.getDate()}, ${start.getFullYear()}`
   }, [weekDays])
 
-  // Current time indicator
-  const now = new Date()
-  const currentTimePosition = useMemo(() => {
-    const hours = now.getHours()
-    const minutes = now.getMinutes()
-    if (hours < 6 || hours > 22) return null
-    return ((hours - 6) * 60 + minutes)
-  }, [now])
-
   // Stats
   const weekStats = useMemo(() => {
     const total = tasks.length
@@ -669,26 +622,25 @@ export default function PlannerPage() {
             </div>
           </div>
 
-          {/* AI Quick Add */}
+          {/* Quick Add */}
           <div className="mt-4 flex gap-2">
             <div className="flex-1 relative">
               <input
                 type="text"
-                value={aiInput}
-                onChange={(e) => setAiInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAIParse()}
-                placeholder='Try "Math study session tomorrow at 3pm for 2 hours"'
+                value={quickInput}
+                onChange={(e) => setQuickInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
+                placeholder="What do you need to do?"
                 className="w-full px-4 py-3 pl-11 bg-bg-card border-2 border-border-default rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-green transition-colors"
               />
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <Button onClick={handleAIParse} loading={aiLoading} className="px-6">
-              Schedule
+            <Button onClick={handleQuickAdd} className="px-6">
+              Add
             </Button>
           </div>
-          {aiError && <p className="text-error text-sm mt-2">{aiError}</p>}
 
           {/* Week Navigation */}
           <div className="mt-4 flex items-center justify-between">
@@ -764,21 +716,6 @@ export default function PlannerPage() {
 
               {/* Time Grid */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto relative">
-                {/* Current Time Indicator */}
-                {currentTimePosition !== null && isToday(weekDays.find(d => isToday(d)) || new Date()) && (
-                  <div
-                    className="absolute left-0 right-0 z-20 pointer-events-none"
-                    style={{ top: `${currentTimePosition}px` }}
-                  >
-                    <div className="flex items-center">
-                      <div className="w-[60px] flex justify-end pr-2">
-                        <div className="w-3 h-3 rounded-full bg-red-500" />
-                      </div>
-                      <div className="flex-1 h-0.5 bg-red-500" />
-                    </div>
-                  </div>
-                )}
-
                 {/* Time Rows */}
                 {timeSlots.map(({ hour, label, value }) => (
                   <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)]" style={{ height: '60px' }}>
@@ -830,7 +767,7 @@ export default function PlannerPage() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-text-primary">Schedule Task</h2>
                   <button
-                    onClick={() => { setShowAddModal(false); setAiError('') }}
+                    onClick={() => setShowAddModal(false)}
                     className="p-2 rounded-lg hover:bg-bg-elevated text-text-muted"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -927,7 +864,7 @@ export default function PlannerPage() {
                 <div className="flex gap-3 mt-6">
                   <Button
                     variant="secondary"
-                    onClick={() => { setShowAddModal(false); setAiError('') }}
+                    onClick={() => setShowAddModal(false)}
                     className="flex-1"
                   >
                     Cancel
