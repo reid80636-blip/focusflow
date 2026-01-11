@@ -1330,7 +1330,12 @@ ${material}`,
       )}
 
       {/* ============ UNIFIED HISTORY SECTION ============ */}
+      {/* Only show when in input mode (entering information) */}
       {combinedHistory.length > 0 && (
+        (activeTool === 'quiz' && quizMode === 'input') ||
+        (activeTool === 'flashcards' && flashcardMode === 'input') ||
+        (activeTool === 'notes' && notesMode === 'input')
+      ) && (
         <Card className="border-border-default">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-text-primary flex items-center gap-2">
