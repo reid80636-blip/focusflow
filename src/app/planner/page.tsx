@@ -93,10 +93,10 @@ const timeSlots = Array.from({ length: 17 }, (_, i) => {
 })
 
 // Draggable Task Component
-function DraggableTask({ task, isCompact = false, isTemplate = false }: { task: Task | RecentTemplate, isCompact?: boolean, isTemplate?: boolean }) {
+function DraggableTask({ task, isCompact = false }: { task: Task, isCompact?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: isTemplate ? `template-${task.id}` : task.id,
-    data: { task, isTemplate }
+    id: task.id,
+    data: { task }
   })
 
   const style = {
@@ -104,7 +104,7 @@ function DraggableTask({ task, isCompact = false, isTemplate = false }: { task: 
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const subjectStyle = getSubjectStyle((task as Task).subject || (task as RecentTemplate).subject)
+  const subjectStyle = getSubjectStyle(task.subject)
 
   if (isCompact) {
     return (
@@ -118,7 +118,7 @@ function DraggableTask({ task, isCompact = false, isTemplate = false }: { task: 
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${subjectStyle.color}`} />
           <span className="text-sm font-medium text-text-primary truncate flex-1">{task.title}</span>
-          {'time' in task && task.time && (
+          {task.time && (
             <span className="text-xs text-text-muted">{formatTimeShort(task.time)}</span>
           )}
         </div>
@@ -139,7 +139,7 @@ function DraggableTask({ task, isCompact = false, isTemplate = false }: { task: 
         <div className="flex-1 min-w-0">
           <p className="font-medium text-text-primary truncate">{task.title}</p>
           <div className="flex items-center gap-2 mt-1">
-            {'time' in task && task.time && (
+            {task.time && (
               <span className={`text-xs ${subjectStyle.text}`}>{formatTime12(task.time)}</span>
             )}
             <span className="text-xs text-text-muted">{task.duration}m</span>
