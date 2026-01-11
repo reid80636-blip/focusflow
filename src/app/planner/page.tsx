@@ -29,14 +29,6 @@ interface Task {
   created_at: string
 }
 
-interface RecentTemplate {
-  id: string
-  title: string
-  duration: number
-  subject: string
-  useCount: number
-}
-
 const subjects = [
   { value: 'math', label: 'Math', color: 'bg-emerald-500', lightBg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/30' },
   { value: 'science', label: 'Science', color: 'bg-blue-500', lightBg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/30' },
@@ -171,55 +163,15 @@ function DroppableTimeSlot({ date, hour, children, isOver }: { date: string, hou
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[60px] border-t border-border-default/50 relative transition-all ${
+      className={`min-h-[80px] border-t border-l border-border-default/50 relative transition-all ${
         showDropIndicator ? 'bg-accent-green/10 border-accent-green' : ''
       }`}
     >
       {showDropIndicator && (
         <div className="absolute inset-0 border-2 border-dashed border-accent-green rounded-lg pointer-events-none z-10" />
       )}
-      <div className="p-1 space-y-1">
+      <div className="p-2 space-y-1">
         {children}
-      </div>
-    </div>
-  )
-}
-
-// Recent Event Template Card
-function RecentEventCard({ template, onDragStart }: { template: RecentTemplate, onDragStart?: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `template-${template.id}`,
-    data: { template, isTemplate: true }
-  })
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.3 : 1,
-  }
-
-  const subjectStyle = getSubjectStyle(template.subject)
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={`group p-3 rounded-xl cursor-grab active:cursor-grabbing transition-all bg-bg-elevated border border-border-default hover:border-accent-green/50 hover:shadow-lg`}
-    >
-      <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl ${subjectStyle.lightBg} flex items-center justify-center`}>
-          <div className={`w-3 h-3 rounded-full ${subjectStyle.color}`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-text-primary text-sm truncate">{template.title}</p>
-          <p className="text-xs text-text-muted">{template.duration}m · {subjectStyle.label}</p>
-        </div>
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-          <svg className="w-5 h-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-          </svg>
-        </div>
       </div>
     </div>
   )
@@ -232,12 +184,9 @@ export default function PlannerPage() {
   // State
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
   const [tasks, setTasks] = useState<Task[]>([])
-  const [recentTemplates, setRecentTemplates] = useState<RecentTemplate[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()))
   const [showAddModal, setShowAddModal] = useState(false)
-  const [showRecentPanel, setShowRecentPanel] = useState(true)
-  const [activeTask, setActiveTask] = useState<Task | RecentTemplate | null>(null)
+  const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [dropTarget, setDropTarget] = useState<{ date: string, time: string } | null>(null)
 
   // Quick input state
@@ -283,40 +232,6 @@ export default function PlannerPage() {
 
         if (!error && data) {
           setTasks(data.map(t => ({ ...t, duration: t.duration || 60 })))
-        }
-
-        // Fetch recent/frequent tasks as templates
-        const { data: recentData } = await supabase
-          .from('planner_tasks')
-          .select('title, duration, subject')
-          .order('created_at', { ascending: false })
-          .limit(50)
-
-        if (recentData) {
-          // Group by title and count occurrences
-          const templateMap = new Map<string, RecentTemplate>()
-          recentData.forEach((t, idx) => {
-            const key = t.title.toLowerCase()
-            if (templateMap.has(key)) {
-              const existing = templateMap.get(key)!
-              existing.useCount++
-            } else {
-              templateMap.set(key, {
-                id: `template-${idx}`,
-                title: t.title,
-                duration: t.duration || 60,
-                subject: t.subject || 'general',
-                useCount: 1
-              })
-            }
-          })
-
-          // Sort by use count and take top 10
-          const templates = Array.from(templateMap.values())
-            .sort((a, b) => b.useCount - a.useCount)
-            .slice(0, 10)
-
-          setRecentTemplates(templates)
         }
       } catch {
         // Silently fail
@@ -380,18 +295,6 @@ export default function PlannerPage() {
 
       if (!error && data) {
         setTasks(prev => [...prev, { ...data, duration: data.duration || 60 }])
-
-        // Add to templates if new
-        const existingTemplate = recentTemplates.find(t => t.title.toLowerCase() === newTask.title.toLowerCase())
-        if (!existingTemplate) {
-          setRecentTemplates(prev => [{
-            id: `template-new-${Date.now()}`,
-            title: newTask.title,
-            duration: newTask.duration,
-            subject: newTask.subject,
-            useCount: 1
-          }, ...prev].slice(0, 10))
-        }
       }
     } catch {
       // Silently fail
@@ -413,33 +316,6 @@ export default function PlannerPage() {
         setTasks(prev => prev.map(t =>
           t.id === taskId ? { ...t, date, time } : t
         ))
-      }
-    } catch {
-      // Silently fail
-    }
-  }
-
-  const createTaskFromTemplate = async (template: RecentTemplate, date: string, time: string) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
-
-      const { data, error } = await supabase
-        .from('planner_tasks')
-        .insert({
-          user_id: session.user.id,
-          title: template.title,
-          date,
-          time,
-          duration: template.duration,
-          subject: template.subject,
-          completed: false,
-        })
-        .select()
-        .single()
-
-      if (!error && data) {
-        setTasks(prev => [...prev, { ...data, duration: data.duration || 60 }])
       }
     } catch {
       // Silently fail
@@ -500,8 +376,6 @@ export default function PlannerPage() {
     const data = active.data.current
     if (data?.task) {
       setActiveTask(data.task)
-    } else if (data?.template) {
-      setActiveTask(data.template)
     }
   }
 
@@ -529,10 +403,7 @@ export default function PlannerPage() {
 
     if (!overData?.date || !overData?.time) return
 
-    if (activeData?.isTemplate && activeData?.template) {
-      // Create new task from template
-      createTaskFromTemplate(activeData.template, overData.date, overData.time)
-    } else if (activeData?.task && !activeData?.isTemplate) {
+    if (activeData?.task) {
       // Move existing task
       updateTaskTime(activeData.task.id, overData.date, overData.time)
     }
@@ -600,18 +471,6 @@ export default function PlannerPage() {
                 </div>
               </div>
 
-              {/* Toggle Recent Panel */}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowRecentPanel(!showRecentPanel)}
-                className={showRecentPanel ? 'bg-accent-green/20 border-accent-green/50' : ''}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </Button>
-
               {/* Add Task */}
               <Button size="sm" onClick={() => setShowAddModal(true)}>
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -663,41 +522,12 @@ export default function PlannerPage() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex gap-4 overflow-hidden">
-          {/* Recent Events Panel */}
-          {showRecentPanel && (
-            <div className="w-64 flex-shrink-0 flex flex-col">
-              <Card className="flex-1 overflow-hidden flex flex-col">
-                <div className="p-4 border-b border-border-default flex-shrink-0">
-                  <h3 className="font-semibold text-text-primary flex items-center gap-2">
-                    <svg className="w-5 h-5 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Recent Events
-                  </h3>
-                  <p className="text-xs text-text-muted mt-1">Drag onto calendar to schedule</p>
-                </div>
-                <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                  {recentTemplates.length === 0 ? (
-                    <div className="text-center py-8 text-text-muted text-sm">
-                      <p>No recent events</p>
-                      <p className="text-xs mt-1">Add tasks to see them here</p>
-                    </div>
-                  ) : (
-                    recentTemplates.map((template) => (
-                      <RecentEventCard key={template.id} template={template} />
-                    ))
-                  )}
-                </div>
-              </Card>
-            </div>
-          )}
-
+        <div className="flex-1 flex overflow-hidden">
           {/* Calendar Grid */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col">
             <Card className="flex-1 overflow-hidden flex flex-col">
               {/* Day Headers */}
-              <div className="flex-shrink-0 grid grid-cols-[60px_repeat(7,1fr)] border-b border-border-default">
+              <div className="flex-shrink-0 grid grid-cols-[80px_repeat(7,1fr)] border-b border-border-default">
                 <div className="p-2" /> {/* Time column spacer */}
                 {weekDays.map((day, i) => (
                   <div
@@ -718,7 +548,7 @@ export default function PlannerPage() {
               <div ref={scrollRef} className="flex-1 overflow-y-auto relative">
                 {/* Time Rows */}
                 {timeSlots.map(({ hour, label, value }) => (
-                  <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)]" style={{ height: '60px' }}>
+                  <div key={hour} className="grid grid-cols-[80px_repeat(7,1fr)]" style={{ height: '80px' }}>
                     {/* Time Label */}
                     <div className="p-2 text-right pr-3 border-r border-border-default/50">
                       <span className="text-xs text-text-muted font-medium">{label}</span>
