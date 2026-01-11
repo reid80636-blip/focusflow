@@ -205,8 +205,11 @@ export default function PlannerPage() {
     const fetchTasks = async () => {
       setLoading(true)
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) {
+        // Refresh session to avoid JWT expired errors
+        await supabase.auth.refreshSession()
+
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
           setLoading(false)
           return
         }
@@ -274,8 +277,21 @@ export default function PlannerPage() {
     const time = `${currentHour.toString().padStart(2, '0')}:00`
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
+      // Refresh session to avoid JWT expired errors
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession()
+
+      if (sessionError || !session?.user) {
+        // Try getting existing session as fallback
+        const { data: { session: existingSession } } = await supabase.auth.getSession()
+        if (!existingSession?.user) {
+          setAddError('Please sign in to add activities')
+          setIsAdding(false)
+          return
+        }
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         setAddError('Please sign in to add activities')
         setIsAdding(false)
         return
@@ -284,7 +300,7 @@ export default function PlannerPage() {
       const { data, error } = await supabase
         .from('planner_tasks')
         .insert({
-          user_id: session.user.id,
+          user_id: user.id,
           title: quickInput.trim(),
           date: formatDate(now),
           time: time,
