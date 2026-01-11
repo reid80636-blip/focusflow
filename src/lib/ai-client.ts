@@ -129,11 +129,19 @@ Return ONLY the JSON, no explanation.`
 }
 
 export async function generateAIResponse(request: AIRequest): Promise<string> {
-  // Call the local API route
-  const response = await fetch('/api/ai', {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Supabase configuration missing.')
+  }
+
+  // Call the Supabase Edge Function
+  const response = await fetch(`${supabaseUrl}/functions/v1/ai`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${supabaseKey}`,
     },
     body: JSON.stringify({
       feature: request.feature,
