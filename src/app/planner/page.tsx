@@ -99,6 +99,7 @@ export default function PlannerPage() {
   const [aiInput, setAiInput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [aiPreview, setAiPreview] = useState<ParsedTask | null>(null)
+  const [aiError, setAiError] = useState('')
 
   // New task form state
   const [newTask, setNewTask] = useState({
@@ -253,13 +254,29 @@ export default function PlannerPage() {
     if (!aiInput.trim()) return
 
     setAiLoading(true)
+    setAiError('')
+    setAiPreview(null)
+
     try {
       const response = await generateAIResponse({
         feature: 'planner',
         input: aiInput,
       })
 
-      const parsed = JSON.parse(response)
+      // Try to extract JSON from the response (in case AI adds extra text)
+      let jsonStr = response
+      const jsonMatch = response.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        jsonStr = jsonMatch[0]
+      }
+
+      const parsed = JSON.parse(jsonStr)
+
+      // Validate required fields
+      if (!parsed.title || !parsed.date) {
+        throw new Error('Missing required fields')
+      }
+
       setAiPreview(parsed)
       setNewTask({
         title: parsed.title,
@@ -268,8 +285,9 @@ export default function PlannerPage() {
         duration: parsed.duration || 60,
         subject: parsed.subject || 'general',
       })
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error('AI Parse error:', err)
+      setAiError('Could not parse task. Try being more specific, like "Math homework tomorrow at 3pm"')
     } finally {
       setAiLoading(false)
     }
@@ -493,6 +511,21 @@ export default function PlannerPage() {
               </svg>
             </Button>
           </div>
+
+          {/* AI Error */}
+          {aiError && (
+            <div className="mt-3 p-3 bg-error/10 border border-error/30 rounded-xl flex items-center gap-2">
+              <svg className="w-5 h-5 text-error flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-error">{aiError}</p>
+              <button onClick={() => setAiError('')} className="ml-auto text-error hover:text-error/80">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
 
           {/* AI Preview */}
           {aiPreview && (

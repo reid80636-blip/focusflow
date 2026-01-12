@@ -4,7 +4,7 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 })
 
-export type FeatureType = 'solver' | 'explainer' | 'summarizer' | 'questions' | 'planner'
+export type FeatureType = 'solver' | 'explainer' | 'summarizer' | 'questions' | 'planner' | 'flashcards' | 'notes'
 export type Subject = 'math' | 'science' | 'ela' | 'social-studies'
 export type GradeLevel = 'elementary' | 'middle' | 'high'
 export type SummaryLength = 'brief' | 'detailed' | 'key-points'
@@ -96,6 +96,21 @@ Your role is to extract activity details from casual descriptions.
 - Estimate reasonable durations if not specified
 - Identify subject categories when mentioned
 - Return ONLY valid JSON, no other text`,
+
+    flashcards: `You are an expert at creating effective flashcards for studying.
+Your role is to create clear, concise flashcards that help students memorize key concepts.
+- Make the front concise (a question, term, or concept)
+- Make the back a clear, memorable answer
+- Focus on the most important information
+- Use simple, clear language`,
+
+    notes: `You are an expert note-taker and study assistant.
+Your role is to help students create clear, organized study notes.
+- Use clear headings and subheadings
+- Include bullet points for key concepts
+- Highlight important terms and definitions
+- Organize information logically
+- Keep notes concise but comprehensive`,
   }
 
   return prompts[feature]
@@ -170,6 +185,12 @@ Examples:
 - "read chapter 5" → no time specified, general subject, duration 60
 
 Return ONLY the JSON, no explanation.`
+
+    case 'flashcards':
+      return input  // The input already contains the full prompt for flashcards
+
+    case 'notes':
+      return input  // The input already contains the full prompt for notes
 
     default:
       return input
