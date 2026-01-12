@@ -55,8 +55,15 @@ export default function ChatPage() {
       ).join('\n\n')
 
       const response = await generateAIResponse({
-        feature: 'chat',
-        input: contextMessages,
+        feature: 'explainer',
+        input: `You are a helpful, friendly AI study assistant having a conversation with a student. Help them learn, understand concepts, solve problems, and answer questions about any subject.
+
+Be conversational, encouraging, and educational. When explaining concepts, use clear language and examples. If asked to solve problems, show your work step by step.
+
+Conversation:
+${contextMessages}
+
+Provide a helpful, clear response to the student's latest message.`,
       })
 
       const assistantMessage: Message = {
