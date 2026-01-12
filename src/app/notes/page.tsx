@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button, Card, Select, Textarea } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { generateAIResponse } from '@/lib/ai-client'
 
 const subjects = [
   { value: '', label: 'Select a subject...' },
@@ -323,12 +324,9 @@ export default function NotesPage() {
     const stylePrompt = getStylePrompt(noteStyle)
 
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          feature: 'notes',
-          input: `${stylePrompt}
+      const response = await generateAIResponse({
+        feature: 'notes',
+        input: `${stylePrompt}
 
 Format the notes with clear sections like:
 
@@ -349,17 +347,10 @@ Summary: Brief overview of main points
 
 Material to create notes from:
 ${material}`,
-          subject,
-        }),
+        subject: subject as 'math' | 'science' | 'ela' | 'social-studies',
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate notes')
-      }
-
-      const parsedNotes = parseNotes(data.response)
+      const parsedNotes = parseNotes(response)
       if (!parsedNotes.sections.length) {
         throw new Error('Could not parse notes. Please try again.')
       }
@@ -421,8 +412,8 @@ ${material}`,
           onClick={() => setShowHistory(!showHistory)}
           className={`fixed top-24 right-4 z-40 px-4 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2 ${
             showHistory
-              ? 'bg-teal-500 text-white'
-              : 'bg-bg-card border border-border-default text-text-secondary hover:text-teal-500 hover:border-teal-500/50'
+              ? 'bg-accent-blue text-white'
+              : 'bg-bg-card border border-border-default text-text-secondary hover:text-accent-blue hover:border-accent-blue/50'
           }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -430,7 +421,7 @@ ${material}`,
           </svg>
           <span className="text-sm font-medium">History</span>
           <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
-            showHistory ? 'bg-white/20 text-white' : 'bg-teal-500 text-white'
+            showHistory ? 'bg-white/20 text-white' : 'bg-accent-blue text-white'
           }`}>
             {history.length}
           </span>
@@ -445,10 +436,10 @@ ${material}`,
             onClick={() => setShowHistory(false)}
           />
           <div className="fixed top-20 right-4 w-80 max-h-[calc(100vh-120px)] z-40">
-            <Card className="p-4 shadow-xl border-teal-500/20">
+            <Card className="p-4 shadow-xl border-accent-blue/20">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold text-text-primary flex items-center gap-2">
-                  <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Recent Notes
@@ -483,14 +474,14 @@ ${material}`,
                       }}
                       className={`group p-3 rounded-lg cursor-pointer transition-all ${
                         selectedHistoryId === item.id
-                          ? 'bg-teal-500/20 border border-teal-500/30'
+                          ? 'bg-accent-blue/20 border border-accent-blue/30'
                           : 'bg-bg-secondary hover:bg-bg-elevated border border-transparent'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className={`font-medium text-sm truncate ${
-                            selectedHistoryId === item.id ? 'text-teal-500' : 'text-text-primary'
+                            selectedHistoryId === item.id ? 'text-accent-blue' : 'text-text-primary'
                           }`}>
                             {item.notes_data.notes.title || item.material_preview.substring(0, 50)}
                           </p>
@@ -533,12 +524,12 @@ ${material}`,
 
         {/* Input Mode */}
         {mode === 'input' && (
-          <Card className="overflow-hidden border-2 border-border-default hover:border-teal-500/30 transition-colors duration-300">
+          <Card className="overflow-hidden border-2 border-border-default hover:border-accent-blue/30 transition-colors duration-300">
             {/* Header */}
-            <div className="bg-gradient-to-r from-teal-500/10 to-transparent px-6 py-4 border-b border-border-default">
+            <div className="bg-gradient-to-r from-accent-blue/10 to-transparent px-6 py-4 border-b border-border-default">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-10 h-10 rounded-xl bg-accent-blue/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
@@ -637,10 +628,10 @@ Examples:
             </div>
 
             {/* Notes Title */}
-            <Card className="border-teal-500/30 bg-gradient-to-r from-teal-500/10 to-transparent">
+            <Card className="border-accent-blue/30 bg-gradient-to-r from-accent-blue/10 to-transparent">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-teal-500/20 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 rounded-xl bg-accent-blue/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
@@ -655,7 +646,7 @@ Examples:
             {notes.sections.map((section, index) => (
               <Card key={index} className="border-border-default">
                 <h3 className="text-lg font-semibold text-text-primary mb-3 flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-lg bg-teal-500/20 text-teal-500 flex items-center justify-center text-sm font-bold">
+                  <span className="w-7 h-7 rounded-lg bg-accent-blue/20 text-accent-blue flex items-center justify-center text-sm font-bold">
                     {index + 1}
                   </span>
                   {section.title}
@@ -663,7 +654,7 @@ Examples:
                 <ul className="space-y-2">
                   {section.content.map((point, pointIndex) => (
                     <li key={pointIndex} className="flex items-start gap-3 text-text-secondary">
-                      <span className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-2 flex-shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-blue mt-2 flex-shrink-0" />
                       <span className="leading-relaxed">{point}</span>
                     </li>
                   ))}

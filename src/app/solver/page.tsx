@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button, Card, Select, Textarea } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { generateAIResponse } from '@/lib/ai-client'
 
 const subjects = [
   { value: 'math', label: 'Math' },
@@ -335,23 +336,13 @@ export default function SolverPage() {
     setSelectedHistoryId(null)
 
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          feature: 'solver',
-          input: problem,
-          subject,
-        }),
+      const response = await generateAIResponse({
+        feature: 'solver',
+        input: problem,
+        subject: subject as 'math' | 'science' | 'ela' | 'social-studies',
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to solve problem')
-      }
-
-      const { steps: parsedSteps, answer } = parseSteps(data.response)
+      const { steps: parsedSteps, answer } = parseSteps(response)
       setSteps(parsedSteps)
       setFinalAnswer(answer)
       setMode('solving')

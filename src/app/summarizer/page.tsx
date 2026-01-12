@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button, Card, Select, Textarea } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { generateAIResponse } from '@/lib/ai-client'
 
 const summaryLengths = [
   { value: 'brief', label: 'Brief (2-3 sentences)' },
@@ -240,12 +241,9 @@ export default function SummarizerPage() {
     setSelectedHistoryId(null)
 
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          feature: 'summarizer',
-          input: `Summarize this text with the following structure:
+      const response = await generateAIResponse({
+        feature: 'summarizer',
+        input: `Summarize this text with the following structure:
 
 Main Idea: [One sentence capturing the core message]
 
@@ -265,17 +263,10 @@ Connections:
 
 Text to summarize:
 ${text}`,
-          summaryLength,
-        }),
+        summaryLength: summaryLength as 'brief' | 'detailed' | 'key-points',
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to summarize')
-      }
-
-      const parsedData = parseSummary(data.response)
+      const parsedData = parseSummary(response)
       setSummaryData(parsedData)
 
       // Save to Supabase

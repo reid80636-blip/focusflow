@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button, Card, Select, Textarea } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { generateAIResponse } from '@/lib/ai-client'
 
 const subjects = [
   { value: '', label: 'Select a subject...' },
@@ -331,12 +332,9 @@ export default function QuestionsPage() {
       : 'Include a mix of straightforward and moderately challenging questions.'
 
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          feature: 'questions',
-          input: `Generate exactly ${numQuestions} ${questionTypePrompt} about this topic/material.
+      const response = await generateAIResponse({
+        feature: 'questions',
+        input: `Generate exactly ${numQuestions} ${questionTypePrompt} about this topic/material.
 ${difficultyPrompt}
 
 Format each question EXACTLY like this:
@@ -351,18 +349,11 @@ Explanation: [Brief explanation why this is correct]
 
 Topic/Material:
 ${material}`,
-          subject,
-          questionCount: numQuestions,
-        }),
+        subject: subject as 'math' | 'science' | 'ela' | 'social-studies',
+        questionCount: numQuestions,
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate questions')
-      }
-
-      const parsedQuestions = parseQuestions(data.response)
+      const parsedQuestions = parseQuestions(response)
       if (parsedQuestions.length === 0) {
         throw new Error('Could not parse questions. Please try again.')
       }

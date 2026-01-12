@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button, Card, Select, Textarea } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { generateAIResponse } from '@/lib/ai-client'
 
 interface SavedExplanation {
   id: string
@@ -325,12 +326,9 @@ export default function ExplainerPage() {
     setExplainOutLoudPrompt('')
 
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          feature: 'explainer',
-          input: `Explain "${topic}" for a ${gradeLevel === 'elementary' ? 'elementary school (grades 3-5)' : gradeLevel === 'middle' ? 'middle school (grades 6-8)' : 'high school (grades 9-12)'} student using this EXACT format:
+      const response = await generateAIResponse({
+        feature: 'explainer',
+        input: `Explain "${topic}" for a ${gradeLevel === 'elementary' ? 'elementary school (grades 3-5)' : gradeLevel === 'middle' ? 'middle school (grades 6-8)' : 'high school (grades 9-12)'} student using this EXACT format:
 
 Main Idea:
 - [Most important thing to know - one short sentence]
@@ -371,17 +369,10 @@ Quick Review:
 - [Key point 1 to remember]
 - [Key point 2 to remember]
 - [Key point 3 to remember]`,
-          gradeLevel,
-        }),
+        gradeLevel: gradeLevel as 'elementary' | 'middle' | 'high',
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to explain concept')
-      }
-
-      const parsedData = parseExplanation(data.response)
+      const parsedData = parseExplanation(response)
       setExplanationData(parsedData)
       setSelectedHistoryId(null)
 

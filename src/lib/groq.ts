@@ -4,7 +4,7 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 })
 
-export type FeatureType = 'solver' | 'explainer' | 'summarizer' | 'questions'
+export type FeatureType = 'solver' | 'explainer' | 'summarizer' | 'questions' | 'planner'
 export type Subject = 'math' | 'science' | 'ela' | 'social-studies'
 export type GradeLevel = 'elementary' | 'middle' | 'high'
 export type SummaryLength = 'brief' | 'detailed' | 'key-points'
@@ -88,6 +88,14 @@ Your role is to help students test their knowledge.
 - For multiple choice, include plausible distractors
 - Provide correct answers with brief explanations
 - Focus on key concepts and understanding`,
+
+    planner: `You are a smart scheduling assistant that parses natural language into structured task data.
+Your role is to extract activity details from casual descriptions.
+- Parse dates relative to today (tomorrow, next Monday, etc.)
+- Extract times in 24-hour format
+- Estimate reasonable durations if not specified
+- Identify subject categories when mentioned
+- Return ONLY valid JSON, no other text`,
   }
 
   return prompts[feature]
@@ -136,6 +144,32 @@ Study Material:
 ${input}
 
 Include the correct answers with brief explanations after each question.`
+
+    case 'planner':
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0]
+      const dayOfWeek = today.toLocaleDateString('en-US', { weekday: 'long' })
+      return `Parse this activity description into structured task data.
+Today is ${dayOfWeek}, ${todayStr}.
+
+User input: "${input}"
+
+Return ONLY a JSON object with these fields:
+{
+  "title": "activity name (extracted or inferred)",
+  "date": "YYYY-MM-DD format",
+  "time": "HH:MM in 24-hour format (or null if not specified)",
+  "duration": number in minutes (default 60 if not specified),
+  "subject": "math" | "science" | "ela" | "social-studies" | "general",
+  "confidence": number between 0 and 1
+}
+
+Examples:
+- "math homework tomorrow at 3pm" → date is tomorrow, time is 15:00, subject is math
+- "study for science test next monday for 2 hours" → duration is 120, subject is science
+- "read chapter 5" → no time specified, general subject, duration 60
+
+Return ONLY the JSON, no explanation.`
 
     default:
       return input
