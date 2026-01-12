@@ -3,7 +3,7 @@
 // Client-side AI service that calls Supabase Edge Function
 // The Edge Function securely stores the Groq API key
 
-export type FeatureType = 'solver' | 'explainer' | 'summarizer' | 'questions' | 'planner' | 'flashcards' | 'notes'
+export type FeatureType = 'solver' | 'explainer' | 'summarizer' | 'questions' | 'planner' | 'flashcards' | 'notes' | 'chat'
 export type Subject = 'math' | 'science' | 'ela' | 'social-studies'
 export type GradeLevel = 'elementary' | 'middle' | 'high'
 export type SummaryLength = 'brief' | 'detailed' | 'key-points'
@@ -122,6 +122,16 @@ Return ONLY the JSON, no explanation.`
 
     case 'notes':
       return input  // The input already contains the full prompt for notes
+
+    case 'chat':
+      return `You are a helpful, friendly AI study assistant. You help students learn, understand concepts, solve problems, and answer questions about any subject.
+
+Be conversational, encouraging, and educational. When explaining concepts, use clear language and examples. If asked to solve problems, show your work step by step.
+
+Student's question:
+${input}
+
+Provide a helpful, clear response.`
 
     default:
       return input
