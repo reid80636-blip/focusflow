@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-type FeatureType = 'solver' | 'explainer' | 'summarizer' | 'questions' | 'planner' | 'flashcards' | 'notes'
+type FeatureType = 'solver' | 'explainer' | 'summarizer' | 'questions' | 'planner' | 'flashcards' | 'notes' | 'chat'
 
 interface AIRequest {
   feature: FeatureType
@@ -86,6 +86,17 @@ Your role is to help students create clear, organized study notes.
 - Highlight important terms and definitions
 - Organize information logically
 - Keep notes concise but comprehensive`,
+
+    chat: `You are a helpful, friendly AI study assistant. You help students learn, understand concepts, solve problems, and answer questions about any subject.
+
+Your role is to:
+- Be conversational, encouraging, and educational
+- Explain concepts using clear language and examples
+- When solving problems, show your work step by step
+- Answer questions thoroughly but concisely
+- Be patient and supportive
+- Connect new ideas to things students might already know
+- Use analogies and real-world examples when helpful`,
   }
 
   return prompts[feature]
